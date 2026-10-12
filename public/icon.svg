@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RoastMemo">
+  <defs>
+    <linearGradient id="thermal" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#d99a3a"/>
+      <stop offset="0.55" stop-color="#d0641f"/>
+      <stop offset="1" stop-color="#ab2712"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#f2e6cf"/>
+  <rect x="72" y="72" width="368" height="368" rx="40" fill="#f7eecf" stroke="#e0cda8" stroke-width="4"/>
+  <g stroke="#c9b48c" stroke-width="3" opacity="0.6">
+    <path d="M72 164 H440 M72 256 H440 M72 348 H440"/>
+    <path d="M164 72 V440 M256 72 V440 M348 72 V440"/>
+  </g>
+  <path d="M96 404 C 176 400 210 372 246 300 C 286 220 322 150 416 120"
+        fill="none" stroke="url(#thermal)" stroke-width="26"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="416" cy="120" r="22" fill="#ab2712"/>
+  <rect x="150" y="118" width="40" height="30" rx="6" fill="#a5521c"/>
+</svg>

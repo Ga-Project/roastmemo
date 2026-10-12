@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RoastMemo">
+  <defs>
+    <linearGradient id="thermalM" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#d99a3a"/>
+      <stop offset="0.55" stop-color="#d0641f"/>
+      <stop offset="1" stop-color="#ab2712"/>
+    </linearGradient>
+  </defs>
+  <!-- maskable: 全面塗り + 中央 80% セーフゾーンに図柄 -->
+  <rect width="512" height="512" fill="#2a1c10"/>
+  <g stroke="#5a4326" stroke-width="3" opacity="0.5">
+    <path d="M128 200 H384 M128 256 H384 M128 312 H384"/>
+    <path d="M200 128 V384 M256 128 V384 M312 128 V384"/>
+  </g>
+  <path d="M136 372 C 196 366 224 342 252 292 C 284 232 314 182 380 156"
+        fill="none" stroke="url(#thermalM)" stroke-width="24"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="380" cy="156" r="20" fill="#ecab48"/>
+</svg>

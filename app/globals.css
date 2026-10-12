@@ -1,0 +1,1156 @@
+/* RoastMemo — デザインシステム「Roast Chart Recorder（焙煎記録計）」
+ *
+ * 世界観: ストリップチャート式サーモグラフ。暖色のオート紙に焙煎カーブを引く記録計。
+ * 盤面（焙煎カーブ）が主役。刻印風の見出し（スラブセリフ）× ヒューマニスト sans 本文 ×
+ * 等幅数字（tabular-nums）で計器の読み取りを支える。mono フォントは使わない。
+ * プレーン CSS + CSS 変数のみ（ビルド不要・output:"export" と両立）。
+ */
+
+/* ===== functional reset ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+* {
+  margin: 0;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+
+/* ===== tokens: light（オート紙 × エスプレッソ・インク × 銅アクセント hue≈22） ===== */
+:root {
+  --font-display:
+    "Roboto Slab", "Zilla Slab", "Rockwell", "Rockwell Nova", Georgia,
+    "Times New Roman", serif;
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial,
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", Meiryo, sans-serif;
+
+  --paper: #f2e6cf;
+  --paper-2: #ebdcbf;
+  --panel: #f8efdc;
+  --panel-edge: #e0cda8;
+  --chart-paper: #f7eecf;
+
+  --ink: #2a1c10;
+  --ink-2: #4f3c26;
+  --muted: #6d552f;
+  --line: rgba(60, 42, 24, 0.18);
+  --grid: rgba(60, 42, 24, 0.1);
+
+  --copper: #a5521c;
+  --copper-2: #8f4514;
+  --accent-fg: #fff8ef;
+  --tint: rgba(165, 82, 28, 0.1);
+
+  --danger: #9a3520;
+
+  /* 盤面のサーマルグラデーション（下=琥珀 → 上=残り火レッド） */
+  --thermal-0: #d99a3a;
+  --thermal-1: #d0641f;
+  --thermal-2: #ab2712;
+  --ghost: rgba(84, 60, 34, 0.42);
+
+  /* ロースト段階のティント帯 */
+  --stage-green: rgba(122, 148, 72, 0.15);
+  --stage-yellow: rgba(214, 170, 60, 0.14);
+  --stage-tan: rgba(190, 120, 60, 0.16);
+  --stage-cocoa: rgba(120, 72, 40, 0.17);
+
+  --radius: 10px;
+  --shadow:
+    0 1px 0 rgba(255, 250, 240, 0.5) inset, 0 6px 18px rgba(60, 40, 20, 0.12);
+  --tap: 44px;
+}
+
+/* OS が暗い外観 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #17110b;
+    --paper-2: #1e1710;
+    --panel: #221a12;
+    --panel-edge: #3a2c1c;
+    --chart-paper: #241a12;
+
+    --ink: #f2e5cd;
+    --ink-2: #ddc9a6;
+    --muted: #b39a6f;
+    --line: rgba(240, 225, 200, 0.16);
+    --grid: rgba(240, 225, 200, 0.08);
+
+    --copper: #dc8a3e;
+    --copper-2: #e79b4f;
+    --accent-fg: #1a1209;
+    --tint: rgba(220, 138, 62, 0.16);
+
+    --danger: #e6795c;
+
+    --thermal-0: #ecab48;
+    --thermal-1: #e46b24;
+    --thermal-2: #d5321f;
+    --ghost: rgba(232, 216, 190, 0.34);
+
+    --stage-green: rgba(152, 178, 92, 0.12);
+    --stage-yellow: rgba(226, 182, 82, 0.1);
+    --stage-tan: rgba(212, 142, 72, 0.12);
+    --stage-cocoa: rgba(154, 98, 56, 0.18);
+
+    --shadow:
+      0 1px 0 rgba(255, 240, 220, 0.05) inset, 0 8px 22px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* 手動トグルは OS 設定より優先（両方向で必ず勝つ） */
+:root[data-theme="dark"] {
+  --paper: #17110b;
+  --paper-2: #1e1710;
+  --panel: #221a12;
+  --panel-edge: #3a2c1c;
+  --chart-paper: #241a12;
+  --ink: #f2e5cd;
+  --ink-2: #ddc9a6;
+  --muted: #b39a6f;
+  --line: rgba(240, 225, 200, 0.16);
+  --grid: rgba(240, 225, 200, 0.08);
+  --copper: #dc8a3e;
+  --copper-2: #e79b4f;
+  --accent-fg: #1a1209;
+  --tint: rgba(220, 138, 62, 0.16);
+  --danger: #e6795c;
+  --thermal-0: #ecab48;
+  --thermal-1: #e46b24;
+  --thermal-2: #d5321f;
+  --ghost: rgba(232, 216, 190, 0.34);
+  --stage-green: rgba(152, 178, 92, 0.12);
+  --stage-yellow: rgba(226, 182, 82, 0.1);
+  --stage-tan: rgba(212, 142, 72, 0.12);
+  --stage-cocoa: rgba(154, 98, 56, 0.18);
+  --shadow:
+    0 1px 0 rgba(255, 240, 220, 0.05) inset, 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme="light"] {
+  --paper: #f2e6cf;
+  --paper-2: #ebdcbf;
+  --panel: #f8efdc;
+  --panel-edge: #e0cda8;
+  --chart-paper: #f7eecf;
+  --ink: #2a1c10;
+  --ink-2: #4f3c26;
+  --muted: #6d552f;
+  --line: rgba(60, 42, 24, 0.18);
+  --grid: rgba(60, 42, 24, 0.1);
+  --copper: #a5521c;
+  --copper-2: #8f4514;
+  --accent-fg: #fff8ef;
+  --tint: rgba(165, 82, 28, 0.1);
+  --danger: #9a3520;
+  --thermal-0: #d99a3a;
+  --thermal-1: #d0641f;
+  --thermal-2: #ab2712;
+  --ghost: rgba(84, 60, 34, 0.42);
+  --stage-green: rgba(122, 148, 72, 0.15);
+  --stage-yellow: rgba(214, 170, 60, 0.14);
+  --stage-tan: rgba(190, 120, 60, 0.16);
+  --stage-cocoa: rgba(120, 72, 40, 0.17);
+  --shadow:
+    0 1px 0 rgba(255, 250, 240, 0.5) inset, 0 6px 18px rgba(60, 40, 20, 0.12);
+}
+
+/* 追加トークン: 入力フィールドの常時可視な境界（WCAG 1.4.11 ≥3:1）と、比較ロットの色相パレット。
+ * ゴースト色は盤面（--chart-paper）に対して十分なコントラストを保つ値を light/dark で分けて持つ。 */
+:root {
+  --field-border: #7d5c30;
+  --ghost-1: #14707d;
+  --ghost-2: #6a3fa0;
+  --ghost-3: #a81f6a;
+  --ghost-4: #2f7d33;
+  --ghost-5: #1f5fa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --field-border: #8a7454;
+    --ghost-1: #3ac6d6;
+    --ghost-2: #b58cff;
+    --ghost-3: #ff6fb0;
+    --ghost-4: #6fd46f;
+    --ghost-5: #6bb6ff;
+  }
+}
+:root[data-theme="dark"] {
+  --field-border: #8a7454;
+  --ghost-1: #3ac6d6;
+  --ghost-2: #b58cff;
+  --ghost-3: #ff6fb0;
+  --ghost-4: #6fd46f;
+  --ghost-5: #6bb6ff;
+}
+:root[data-theme="light"] {
+  --field-border: #7d5c30;
+  --ghost-1: #14707d;
+  --ghost-2: #6a3fa0;
+  --ghost-3: #a81f6a;
+  --ghost-4: #2f7d33;
+  --ghost-5: #1f5fa6;
+}
+
+/* ===== base ===== */
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 40px);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+/* ===== a11y utilities ===== */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 50;
+  background: var(--copper);
+  color: var(--accent-fg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+:focus-visible {
+  outline: 3px solid var(--copper);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ===== layout ===== */
+.recorder {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: clamp(12px, 3vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* サーモカプル読み取りバー（刻印風の製品名 + デジタル読み取り） */
+.thermobar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--panel), var(--paper-2));
+  border: 1px solid var(--panel-edge);
+  box-shadow: var(--shadow);
+}
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.brand-plate {
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--copper-2),
+    var(--copper)
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.brand-probe {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent-fg);
+}
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.2rem, 3.5vw, 1.6rem);
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255, 250, 240, 0.4);
+}
+.brand-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.readout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.readout-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.readout-num {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--copper-2);
+}
+.readout-unit {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.readout-tag {
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--copper-2);
+  white-space: nowrap;
+}
+.theme-toggle {
+  flex: 0 0 auto;
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: 999px;
+  border: 1px solid var(--panel-edge);
+  background: var(--paper);
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+.theme-toggle:hover {
+  background: var(--tint);
+  transform: translateY(-1px);
+}
+
+.deck {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  outline: none;
+}
+.live-msg {
+  min-height: 1.2em;
+  font-size: 0.86rem;
+  color: var(--copper-2);
+  font-weight: 600;
+}
+.live-msg:empty {
+  min-height: 0;
+}
+
+/* ===== panels ===== */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(12px, 2.5vw, 20px);
+}
+
+/* ===== 盤面（記録計チャート） ===== */
+.chart-panel {
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0.15), transparent),
+    var(--panel);
+}
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+.chart-paper {
+  fill: var(--chart-paper);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+.axis-num {
+  fill: var(--muted);
+  font-size: 15px;
+  font-family: var(--font-sans);
+}
+.axis-cap {
+  fill: var(--ink-2);
+  font-size: 15px;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.stage-label {
+  fill: var(--ink-2);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.roast-curve {
+  fill: none;
+  stroke: url(#thermal);
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.point-mark {
+  fill: var(--thermal-1);
+  stroke: var(--chart-paper);
+  stroke-width: 1.2;
+}
+.pen-dot {
+  fill: var(--thermal-2);
+  stroke: var(--chart-paper);
+  stroke-width: 1.5;
+}
+.pen-halo {
+  fill: none;
+  stroke: var(--thermal-2);
+  stroke-width: 1.5;
+  opacity: 0.4;
+}
+/* 比較ロット: 色はグループの color（CSS変数）を currentColor で受け、破線は要素側で指定。 */
+.ghost-curve {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  opacity: 0.95;
+}
+.ghost-end {
+  fill: currentColor;
+  stroke: var(--chart-paper);
+  stroke-width: 1;
+}
+.ghost-label {
+  fill: currentColor;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  paint-order: stroke;
+  stroke: var(--chart-paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.flag-stem {
+  stroke: var(--copper);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 3;
+  opacity: 0.7;
+}
+.flag-body {
+  fill: var(--copper);
+}
+.flag-text {
+  fill: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+.chart-empty {
+  fill: var(--muted);
+  font-size: 18px;
+  font-family: var(--font-display);
+}
+.chart-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 4px 2px;
+}
+.legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lg-line {
+  width: 20px;
+  height: 0;
+  border-top-width: 3px;
+  border-top-style: solid;
+}
+.lg-curve {
+  border-top-color: var(--thermal-1);
+}
+.lg-ghost {
+  border-top-style: dashed;
+  border-top-color: var(--ghost);
+}
+.lg-flag {
+  width: 14px;
+  height: 12px;
+  background: var(--copper);
+  border-radius: 2px;
+}
+.overlay-caption {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.overlay-caption b {
+  color: var(--copper-2);
+  font-size: 1.05rem;
+}
+/* 重ねているロットと盤面の色の対応（3件以上でも判別できるよう色相を明示）。 */
+.ghost-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 6px 4px 2px;
+}
+.ghost-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  max-width: 100%;
+  min-width: 0;
+}
+.ghost-swatch {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 4px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.ghost-legend-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== フォーム部品 ===== */
+/* mutation 進行中に入力レール/豆プレートを native disable するためのラッパ。
+ * 見た目は持たず（枠/余白なし）、flex 子の収縮を妨げないよう min-width:0 を敷く。 */
+.form-lock {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+input,
+textarea,
+select {
+  background: var(--paper);
+  /* 常時可視な境界（--field-border は bg / panel 双方に対し ≥3:1・WCAG 1.4.11）。 */
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: var(--tap);
+  color: var(--ink);
+  width: 100%;
+}
+textarea {
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.55;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--copper);
+}
+input::placeholder,
+textarea::placeholder {
+  /* 入力書式の実例を担うので opacity で薄めず、--muted の実測 ≥4.5:1 を保つ。 */
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* ボタン */
+.btn,
+.btn-ghost,
+.btn-event,
+.btn-overlay,
+.linkish,
+.file-btn {
+  min-height: var(--tap);
+  border-radius: 8px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    transform 0.1s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.btn {
+  padding: 10px 20px;
+  background: linear-gradient(180deg, var(--copper), var(--copper-2));
+  color: var(--accent-fg);
+  border: 1px solid var(--copper-2);
+  box-shadow: 0 2px 6px rgba(120, 60, 20, 0.25);
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+/* in-flight（保存/インポート/削除中）の mutation コントロールは非活性表示にする。 */
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-ghost {
+  padding: 9px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--panel-edge);
+}
+.btn-ghost:hover {
+  background: var(--tint);
+}
+.btn-ghost.small {
+  min-height: var(--tap);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+.btn-ghost.danger {
+  color: var(--danger);
+}
+.linkish {
+  min-height: var(--tap);
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  color: var(--copper-2);
+  text-decoration: underline;
+  font-size: 0.82rem;
+}
+
+/* ===== 入力レール ===== */
+.rail-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.field-time,
+.field-temp {
+  flex: 1 1 120px;
+}
+.btn-plot {
+  flex: 0 0 auto;
+}
+.rail-events {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.btn-event {
+  padding: 8px 14px;
+  background: var(--paper);
+  border: 1px dashed var(--copper);
+  color: var(--copper-2);
+  font-size: 0.86rem;
+}
+.btn-event:hover {
+  background: var(--tint);
+  border-style: solid;
+}
+.rail-hint {
+  margin-top: 10px;
+}
+
+/* ===== 豆データプレート ===== */
+.bean-head {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.field-bean {
+  flex: 3 1 220px;
+}
+.field-date {
+  flex: 1 1 150px;
+}
+.bean-weights {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 14px;
+}
+.bean-weights .field {
+  flex: 1 1 110px;
+}
+.loss {
+  flex: 1 1 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.loss-num {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--copper-2);
+  line-height: 1.1;
+}
+.loss-unit {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-left: 2px;
+}
+.roast-swatch {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swatch {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.field-cup,
+.field-tags {
+  margin-top: 14px;
+}
+.tag-input-row {
+  display: flex;
+  gap: 8px;
+}
+.tag-input-row input {
+  flex: 1 1 auto;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.chip {
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  border: 1px solid var(--panel-edge);
+  background: var(--paper);
+  color: var(--ink-2);
+}
+/* 操作できるチップ（絞り込み・候補・タグ外し）は 44px を確保。表示専用の chip-static は対象外。 */
+button.chip {
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+}
+.chip-on {
+  background: var(--copper);
+  color: var(--accent-fg);
+  border-color: var(--copper-2);
+}
+.chip-suggest {
+  border-style: dashed;
+  color: var(--muted);
+}
+.chip-static {
+  cursor: default;
+}
+.bean-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* ===== ログ一覧 ===== */
+.logs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.logs-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.search {
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.filter-chip {
+  cursor: pointer;
+}
+.log-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.log-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-edge);
+  background: var(--paper);
+}
+.log-item.is-overlaid {
+  border-color: var(--copper);
+  box-shadow: 0 0 0 1px var(--copper) inset;
+}
+.log-item.is-editing {
+  border-left: 4px solid var(--copper);
+}
+.log-spark {
+  flex: 0 0 auto;
+  width: 120px;
+}
+.spark {
+  width: 120px;
+  height: 40px;
+}
+.spark-curve {
+  fill: none;
+  stroke: var(--thermal-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.spark.is-active .spark-curve {
+  stroke: var(--thermal-2);
+  stroke-width: 2.5;
+}
+.spark-base {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.log-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.log-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.log-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.log-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.log-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+.log-cup {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.log-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.log-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* 削除の2段階確認（本当に削除 / やめる）。既存の破壊的トークン・44px タップを維持。 */
+.del-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btn-overlay {
+  padding: 6px 14px;
+  min-height: var(--tap);
+  font-size: 0.82rem;
+  background: var(--paper);
+  border: 1px solid var(--copper);
+  color: var(--copper-2);
+}
+.btn-overlay.is-on {
+  background: var(--copper);
+  color: var(--accent-fg);
+}
+
+/* ===== 空・エラー・ローディング ===== */
+.empty {
+  text-align: center;
+  padding: 24px 12px;
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.empty-filter {
+  padding: 12px 4px;
+}
+.error-box {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.chart-skeleton {
+  width: 100%;
+  aspect-ratio: 1000 / 582;
+  border-radius: 8px;
+  background: linear-gradient(
+    100deg,
+    var(--paper-2) 30%,
+    var(--tint) 50%,
+    var(--paper-2) 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+  margin-bottom: 8px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ===== バックアップ ===== */
+.backup > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-display);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+}
+.backup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+.backup-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.backup-col textarea {
+  font-size: 0.82rem;
+}
+.backup-import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.file-btn {
+  position: relative;
+  overflow: hidden;
+  padding: 8px 14px;
+  background: var(--paper);
+  border: 1px solid var(--panel-edge);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+.file-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  min-height: 0;
+}
+
+/* ===== 404 ===== */
+.notfound {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: clamp(48px, 12vh, 120px) 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+.notfound h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--ink);
+}
+
+/* ===== footer ===== */
+.foot {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  padding: 8px 4px 24px;
+}
+
+/* ===== responsive ===== */
+@media (max-width: 560px) {
+  .thermobar {
+    gap: 10px;
+  }
+  .readout {
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .log-item {
+    flex-wrap: wrap;
+  }
+  .log-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}
+
+/* ===== reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
